@@ -89,11 +89,21 @@ def update_forecast():
     if not running:
         return
     
-    sensor.read_sensor()
-    ir, red = sensor.ir, sensor.red
+    # Collect multiple readings for stable glucose measurement
+    ir_readings, red_readings = [], []
+    print("Scanning sensor for glucose reading...")
+    for i in range(50):  # Take 50 readings over ~5 seconds
+        sensor.read_sensor()
+        ir_readings.append(sensor.ir)
+        red_readings.append(sensor.red)
+        time.sleep(0.1)
+    
+    # Use average of readings
+    ir = sum(ir_readings) / len(ir_readings)
+    red = sum(red_readings) / len(red_readings)
     
     # Debug output
-    print(f"Sensor readings - IR: {ir}, Red: {red}")
+    print(f"Average sensor readings - IR: {ir:.2f}, Red: {red:.2f}")
     
     predicted_glucose = predict_glucose(ir, red)
     
