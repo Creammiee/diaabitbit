@@ -17,11 +17,11 @@ GPIO.setup(STOP_BTN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 sensor = MAX30100()
 sensor.enable_spo2()
-sensor.set_led_current(50, 50)
+sensor.set_led_current(50.0, 50.0)
 time.sleep(1)
 
 sarimax_model = joblib.load("sarimax_model.pkl")
-horizons = [5, 15, 30, 60, 480, 720, 1440]
+horizons = [5, 15, 30, 60, 180, 360, 720, 1440]
 temperature = 36.0
 
 root = tk.Tk()
