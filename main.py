@@ -83,18 +83,31 @@ def predict_glucose(ir, red):
 
 running = False
 update_job = None
-last_predicted_glucose = 123.0
 
 def update_forecast():
-    global update_job, last_predicted_glucose
+    global update_job
     if not running:
         return
+    
     sensor.read_sensor()
     ir, red = sensor.ir, sensor.red
+    
+    # Debug output
+    print(f"Sensor readings - IR: {ir}, Red: {red}")
+    
     predicted_glucose = predict_glucose(ir, red)
+    
     if predicted_glucose is None:
-        predicted_glucose = last_predicted_glucose
-    last_predicted_glucose = predicted_glucose
+        current_label.config(text="Current: Invalid Reading")
+        print("WARNING: Invalid sensor reading (IR or Red <= 0)")
+        # Skip this update cycle, try again in 10 seconds
+        update_job = root.after(10000, update_forecast)
+        return
+    
+    # Valid reading - proceed with forecast
+    current_label.config(text=f"Current: {predicted_glucose:.1f} mg/dL")
+    print(f"Predicted Glucose: {predicted_glucose:.1f} mg/dL")
+    
     hr, ibi = get_hr_ibi(duration=60)
     exog = pd.DataFrame({
         "HeartRate": [hr] * len(horizons),
@@ -103,7 +116,7 @@ def update_forecast():
     })
     forecast = sarimax_model.get_forecast(steps=len(horizons), exog=exog)
     forecasted_glucose = forecast.predicted_mean + predicted_glucose - forecast.predicted_mean.iloc[0]
-    current_label.config(text=f"Current: {predicted_glucose:.1f} mg/dL")
+    
     ax.clear()
     ax.plot(horizons, forecasted_glucose, marker='o', markersize=4, linestyle='-', color='blue', linewidth=1.5)
     ax.set_title("Glucose Forecast", fontsize=10)
@@ -114,6 +127,7 @@ def update_forecast():
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     canvas.draw()
+    
     update_job = root.after(10000, update_forecast)
 
 def start(channel=None):
